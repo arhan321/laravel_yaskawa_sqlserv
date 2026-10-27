@@ -8,6 +8,8 @@ use App\Models\Robot;
 use App\Models\RobotTelemetrySample;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use LogicException;
 
 /** Real data-quality metrics; utilization is intentionally unavailable until state intervals exist. */
 class AnalyticsController extends BaseRmsController
@@ -19,12 +21,24 @@ class AnalyticsController extends BaseRmsController
             'to' => ['required', 'date', 'after_or_equal:from'],
         ]);
 
-        // PostgreSQL FILTER syntax, only real readings from the telemetry table.
+        // Use aggregation syntax compatible with the selected database driver.
+        $driver = DB::connection()->getDriverName();
+        [$positionCount, $torqueCount] = match ($driver) {
+            'sqlsrv' => [
+                'SUM(CASE WHEN position_ok = 1 THEN 1 ELSE 0 END)',
+                'SUM(CASE WHEN torque_ok = 1 THEN 1 ELSE 0 END)',
+            ],
+            'pgsql' => [
+                'COUNT(*) FILTER (WHERE position_ok IS TRUE)',
+                'COUNT(*) FILTER (WHERE torque_ok IS TRUE)',
+            ],
+            default => throw new LogicException('RMS analytics requires SQL Server or PostgreSQL.'),
+        };
         $totals = RobotTelemetrySample::query()
             ->select('robot_id')
             ->selectRaw('COUNT(*) AS sample_count')
-            ->selectRaw('COUNT(*) FILTER (WHERE position_ok = true) AS position_success_count')
-            ->selectRaw('COUNT(*) FILTER (WHERE torque_ok = true) AS torque_success_count')
+            ->selectRaw("$positionCount AS position_success_count")
+            ->selectRaw("$torqueCount AS torque_success_count")
             ->whereBetween('sampled_at', [$filters['from'], $filters['to']])
             ->groupBy('robot_id')
             ->get()

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Web;
 
+use App\Support\RmsDatabase;
 use App\Models\Robot;
 use App\Models\RobotTelemetrySample;
 use App\Services\Rms\ObservedOperationRate;
@@ -11,6 +12,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use LogicException;
 
 class AnalyticsController extends BaseRmsWebController
 {
@@ -23,12 +25,27 @@ class AnalyticsController extends BaseRmsWebController
         $until = CarbonImmutable::now();
         $since = $period === '7d' ? $until->subDays(7) : $until->subDay();
 
+        // SQL Server uses CASE/SUM for conditional counts; PostgreSQL supports FILTER.
+        $driver = DB::connection()->getDriverName();
+        [$positionCount, $torqueCount] = match ($driver) {
+            'sqlsrv' => [
+                'SUM(CASE WHEN position_ok = 1 THEN 1 ELSE 0 END)',
+                'SUM(CASE WHEN torque_ok = 1 THEN 1 ELSE 0 END)',
+            ],
+            'pgsql' => [
+                'COUNT(*) FILTER (WHERE position_ok IS TRUE)',
+                'COUNT(*) FILTER (WHERE torque_ok IS TRUE)',
+            ],
+            default => throw new LogicException('RMS analytics requires SQL Server or PostgreSQL.'),
+        };
+        $localDay = RmsDatabase::jakartaDay();
+
         // Only data quality. These samples do NOT contain RUN/IDLE state intervals.
         $perRobot = RobotTelemetrySample::query()
             ->where('sampled_at', '>=', $since)
             ->selectRaw('robot_id, COUNT(*) AS total_samples')
-            ->selectRaw('COUNT(*) FILTER (WHERE position_ok = TRUE) AS valid_position')
-            ->selectRaw('COUNT(*) FILTER (WHERE torque_ok = TRUE) AS valid_torque')
+            ->selectRaw("$positionCount AS valid_position")
+            ->selectRaw("$torqueCount AS valid_torque")
             ->groupBy('robot_id')
             ->get()
             ->keyBy('robot_id');
@@ -36,11 +53,11 @@ class AnalyticsController extends BaseRmsWebController
         // Cap to 7 days; group by Jakarta calendar dates for consistent display.
         $daily = DB::table('robot_telemetry_samples')
             ->where('sampled_at', '>=', $since)
-            ->selectRaw("DATE(sampled_at AT TIME ZONE 'Asia/Jakarta') AS local_day")
+            ->selectRaw("$localDay AS local_day")
             ->selectRaw('COUNT(*) AS total_samples')
-            ->selectRaw('COUNT(*) FILTER (WHERE position_ok = TRUE) AS valid_position')
-            ->selectRaw('COUNT(*) FILTER (WHERE torque_ok = TRUE) AS valid_torque')
-            ->groupByRaw("DATE(sampled_at AT TIME ZONE 'Asia/Jakarta')")
+            ->selectRaw("$positionCount AS valid_position")
+            ->selectRaw("$torqueCount AS valid_torque")
+            ->groupByRaw($localDay)
             ->orderBy('local_day')
             ->get();
 
