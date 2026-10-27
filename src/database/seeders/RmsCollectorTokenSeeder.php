@@ -131,25 +131,26 @@ class RmsCollectorTokenSeeder extends Seeder
                     ->where('id', self::TOKEN_ID)
                     ->update($tokenData);
             } else {
-                $sqlServer = DB::connection()->getDriverName() === 'sqlsrv';
-                if ($sqlServer) {
-                    DB::statement('SET IDENTITY_INSERT personal_access_tokens ON');
-                }
-                try {
-                    DB::table('personal_access_tokens')->insert(
-                        array_merge(
-                            $tokenData,
-                            [
-                                'id' => self::TOKEN_ID,
-                                'last_used_at' => null,
-                                'created_at' => now(),
-                            ]
-                        )
+                // Biarkan database menghasilkan ID identity/sequence.
+                // Database lab baru diharapkan memberikan ID 1 untuk token pertama.
+                $insertedId = DB::table('personal_access_tokens')->insertGetId(
+                    array_merge(
+                        $tokenData,
+                        [
+                            'last_used_at' => null,
+                            'created_at' => now(),
+                        ]
+                    )
+                );
+
+                if ((int) $insertedId !== self::TOKEN_ID) {
+                    throw new RuntimeException(
+                        'Token collector seharusnya mendapat ID '
+                        . self::TOKEN_ID
+                        . ', tetapi database memberikan ID '
+                        . $insertedId
+                        . '.'
                     );
-                } finally {
-                    if ($sqlServer) {
-                        DB::statement('SET IDENTITY_INSERT personal_access_tokens OFF');
-                    }
                 }
             }
 
