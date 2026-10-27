@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Web;
 
+use App\Support\RmsDatabase;
 use App\Http\Controllers\Controller;
 use App\Models\MaintenanceLog;
 use App\Models\MaintenanceRecommendation;
@@ -162,7 +163,7 @@ final class RobotLogController extends Controller
         return $quota;
     }
 
-    /** @return array<string, string> Individually selectable PostgreSQL log sources. */
+    /** @return array<string, string> Individually selectable database log sources. */
     private function types(): array
     {
         return [
@@ -290,11 +291,15 @@ final class RobotLogController extends Controller
         $combined = null;
         foreach ($selected as $type) {
             [, $table, $timestamp] = self::SOURCES[$type];
+            if ($type === 'maintenance' && DB::connection()->getDriverName() === 'sqlsrv') {
+                $timestamp = 'rms_log_at';
+            }
+            $utcTimestamp = RmsDatabase::utcTimestamp($timestamp);
             $part = DB::table($table)
-                ->selectRaw("id AS record_id, robot_id, ($timestamp AT TIME ZONE 'UTC') AS logged_at_utc, '$type'::text AS log_type")
+                ->selectRaw("id AS record_id, robot_id, $utcTimestamp AS logged_at_utc, CAST(? AS varchar(32)) AS log_type", [$type])
                 ->whereRaw("$timestamp >= ? AND $timestamp < ?", [$f['from_utc'], $f['until_utc']]);
             if ($f['robot_ids'] !== []) {
-                $part->whereIn('robot_id', $f['robot_ids']);
+                $part->whereIntegerInRaw('robot_id', $f['robot_ids']);
             }
             if ($combined === null) {
                 $combined = $part;
@@ -431,3 +436,4 @@ final class RobotLogController extends Controller
         return preg_match('/^[\s\x00-\x1F]*[=+\-@]/u', $text) ? "'" . $text : $text;
     }
 }
+
