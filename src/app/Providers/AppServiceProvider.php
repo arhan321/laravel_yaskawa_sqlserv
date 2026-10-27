@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Database\RmsSqlServerConnection;
+use Illuminate\Database\Connection;
 use App\Models\MaintenanceRecommendation;
 use App\Models\RobotAlarmEvent;
 use App\Models\RobotAlarmSnapshot;
@@ -21,7 +23,9 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // No additional service bindings are required for read-only Cockpit.
+        Connection::resolverFor('sqlsrv', static function ($pdo, $database, $prefix, $config) {
+            return new RmsSqlServerConnection($pdo, $database, $prefix, $config);
+        });
     }
 
     public function boot(): void
@@ -46,3 +50,4 @@ class AppServiceProvider extends ServiceProvider
         // \Illuminate\Support\Facades\URL::forceScheme('https');
     }
 }
+

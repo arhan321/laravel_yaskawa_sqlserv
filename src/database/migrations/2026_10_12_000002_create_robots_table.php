@@ -12,7 +12,7 @@ return new class extends Migration
     {
         Schema::create('robots', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('controller_id')->constrained('robot_controllers')->restrictOnDelete();
+            $table->foreignId('controller_id')->constrained('robot_controllers')->noActionOnDelete();
             $table->string('robot_code', 80)->unique();
             $table->string('name', 150);
             $table->string('model', 80)->default('SP210');
@@ -33,3 +33,4 @@ return new class extends Migration
         Schema::dropIfExists('robots');
     }
 };
+

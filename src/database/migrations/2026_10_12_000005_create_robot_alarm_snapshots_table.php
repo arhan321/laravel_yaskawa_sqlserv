@@ -14,7 +14,7 @@ return new class extends Migration
         // A read failure must NOT be treated as "no active alarms".
         Schema::create('robot_alarm_snapshots', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('robot_id')->constrained('robots')->restrictOnDelete();
+            $table->foreignId('robot_id')->constrained('robots')->noActionOnDelete();
             $table->timestampTz('sampled_at', 3);
             $table->timestampTz('received_at', 3)->useCurrent();
             $table->boolean('read_ok')->default(false);
@@ -34,3 +34,4 @@ return new class extends Migration
         Schema::dropIfExists('robot_alarm_snapshots');
     }
 };
+

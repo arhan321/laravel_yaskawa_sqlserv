@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\RmsModel as Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class RobotController extends Model
@@ -44,3 +44,4 @@ class RobotController extends Model
         return $this->hasMany(Robot::class, 'controller_id', 'id');
     }
 }
+

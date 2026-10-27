@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\RmsModel as Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 final class RobotAlarmHistoryEntry extends Model
@@ -27,3 +27,4 @@ final class RobotAlarmHistoryEntry extends Model
         return $this->belongsTo(Robot::class);
     }
 }
+

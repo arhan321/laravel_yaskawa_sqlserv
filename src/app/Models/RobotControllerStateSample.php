@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\RmsModel as Model;
 
 final class RobotControllerStateSample extends Model
 {
@@ -22,3 +22,4 @@ final class RobotControllerStateSample extends Model
         ];
     }
 }
+

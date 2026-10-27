@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\RmsModel as Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class RobotOperatingTimeSample extends Model
@@ -40,3 +40,4 @@ class RobotOperatingTimeSample extends Model
         return $this->belongsTo(Robot::class);
     }
 }
+

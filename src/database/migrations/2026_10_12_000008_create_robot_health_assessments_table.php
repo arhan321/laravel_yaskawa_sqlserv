@@ -13,7 +13,7 @@ return new class extends Migration
         // Health is computed by validated rules in a later phase, never by database defaults.
         Schema::create('robot_health_assessments', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('robot_id')->constrained('robots')->restrictOnDelete();
+            $table->foreignId('robot_id')->constrained('robots')->noActionOnDelete();
             $table->string('health_status', 32)->default('unknown');
             // unknown, healthy, warning, critical, offline, insufficient_data
             $table->timestampTz('evaluated_at', 3);
@@ -32,3 +32,4 @@ return new class extends Migration
         Schema::dropIfExists('robot_health_assessments');
     }
 };
+

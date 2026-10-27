@@ -12,7 +12,7 @@ return new class extends Migration
     {
         Schema::create('robot_operating_time_samples', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('robot_id')->constrained('robots')->restrictOnDelete();
+            $table->foreignId('robot_id')->constrained('robots')->noActionOnDelete();
             $table->string('time_type', 80); // e.g. ServoPowerOnTimeRobot
             $table->timestampTz('sampled_at', 3);
             $table->timestampTz('received_at', 3)->useCurrent();
@@ -34,3 +34,4 @@ return new class extends Migration
         Schema::dropIfExists('robot_operating_time_samples');
     }
 };
+

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -13,7 +14,7 @@ return new class extends Migration
         // Structured event history is created ONLY after an alarm can be identified.
         Schema::create('robot_alarm_events', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('robot_id')->constrained('robots')->restrictOnDelete();
+            $table->foreignId('robot_id')->constrained('robots')->noActionOnDelete();
             $table->string('event_key', 160)->nullable(); // Unique occurrence ID; NOT only alarm code.
             $table->string('alarm_code', 60)->nullable();
             $table->string('subcode', 60)->nullable();
@@ -27,9 +28,14 @@ return new class extends Migration
             $table->jsonb('details')->nullable();
             $table->timestampsTz(3);
 
-            $table->unique(['robot_id', 'event_key'], 'alarm_event_occurrence_uq');
+            if (DB::connection()->getDriverName() !== 'sqlsrv') {
+                $table->unique(['robot_id', 'event_key'], 'alarm_event_occurrence_uq');
+            }
             $table->index(['robot_id', 'status', 'started_at'], 'alarm_event_status_time_idx');
         });
+        if (DB::connection()->getDriverName() === 'sqlsrv') {
+            DB::statement('CREATE UNIQUE INDEX alarm_event_occurrence_uq ON robot_alarm_events (robot_id, event_key) WHERE event_key IS NOT NULL');
+        }
     }
 
     public function down(): void
@@ -37,3 +43,4 @@ return new class extends Migration
         Schema::dropIfExists('robot_alarm_events');
     }
 };
+

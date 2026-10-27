@@ -12,8 +12,8 @@ return new class extends Migration
     {
         Schema::create('maintenance_logs', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('robot_id')->constrained('robots')->restrictOnDelete();
-            $table->foreignId('maintenance_plan_id')->nullable()->constrained('maintenance_plans')->restrictOnDelete();
+            $table->foreignId('robot_id')->constrained('robots')->noActionOnDelete();
+            $table->foreignId('maintenance_plan_id')->nullable()->constrained('maintenance_plans')->noActionOnDelete();
             $table->string('action_type', 40)->default('preventive');
             $table->string('result', 40)->default('recorded'); // recorded, completed, follow_up_required
             $table->string('performed_by', 120);
@@ -35,3 +35,4 @@ return new class extends Migration
         Schema::dropIfExists('maintenance_logs');
     }
 };
+

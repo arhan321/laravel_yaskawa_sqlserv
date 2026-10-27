@@ -3,6 +3,7 @@ name: rms-yaskawa-sqlserver
 
 services:
   sqlserver_yaskawa:
+    container_name: sqlserver_yaskawa
     image: ${MSSQL_IMAGE:-mcr.microsoft.com/mssql/server:2022-latest}
     platform: linux/amd64
     restart: unless-stopped
@@ -29,6 +30,7 @@ services:
       start_period: 60s
 
   php_yaskawa:
+    container_name: php_yaskawa
     build:
       context: ./php
     image: rms-yaskawa-php-sqlserver:local
@@ -42,6 +44,7 @@ services:
         condition: service_healthy
 
   reverb_yaskawa:
+    container_name: reverb_yaskawa
     image: rms-yaskawa-php-sqlserver:local
     restart: unless-stopped
     working_dir: /var/www/html
@@ -54,6 +57,7 @@ services:
         condition: service_started
 
   scheduler_yaskawa:
+    container_name: scheduler_yaskawa
     image: rms-yaskawa-php-sqlserver:local
     restart: unless-stopped
     working_dir: /var/www/html
@@ -66,6 +70,7 @@ services:
         condition: service_started
 
   nginx_yaskawa:
+    container_name: nginx_yaskawa
     build:
       context: ./nginx
     image: rms-yaskawa-nginx-sqlserver:local

@@ -11,7 +11,7 @@ return new class extends Migration {
     {
         Schema::create('robot_prediction_models', static function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('robot_id')->constrained('robots')->restrictOnDelete();
+            $table->foreignId('robot_id')->constrained('robots')->noActionOnDelete();
             $table->string('axis', 2);
             $table->unsignedInteger('version');
             $table->string('algorithm', 80)->default('linear_trend_verified_inspections');
@@ -34,9 +34,9 @@ return new class extends Migration {
         });
         Schema::create('robot_predictions', static function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('robot_id')->constrained('robots')->restrictOnDelete();
-            $table->foreignId('model_id')->constrained('robot_prediction_models')->restrictOnDelete();
-            $table->foreignId('source_measurement_id')->constrained('robot_reducer_measurements')->restrictOnDelete();
+            $table->foreignId('robot_id')->constrained('robots')->noActionOnDelete();
+            $table->foreignId('model_id')->constrained('robot_prediction_models')->noActionOnDelete();
+            $table->foreignId('source_measurement_id')->constrained('robot_reducer_measurements')->noActionOnDelete();
             $table->string('axis', 2);
             $table->string('status', 32); // projected / not_projectable
             $table->timestampTz('predicted_threshold_at')->nullable();
@@ -60,3 +60,4 @@ return new class extends Migration {
         Schema::dropIfExists('robot_prediction_models');
     }
 };
+

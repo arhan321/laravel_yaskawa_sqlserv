@@ -12,7 +12,7 @@ return new class extends Migration
     {
         Schema::create('robot_controller_state_samples', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('robot_id')->constrained('robots')->restrictOnDelete();
+            $table->foreignId('robot_id')->constrained('robots')->noActionOnDelete();
             $table->foreignId('telemetry_sample_id')->unique()->constrained('robot_telemetry_samples')->cascadeOnDelete();
             $table->timestampTz('sampled_at', 3);
             $table->timestampTz('received_at', 3);
@@ -29,7 +29,7 @@ return new class extends Migration
 
         Schema::create('robot_alarm_history_entries', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('robot_id')->constrained('robots')->restrictOnDelete();
+            $table->foreignId('robot_id')->constrained('robots')->noActionOnDelete();
             $table->foreignId('first_snapshot_id')->constrained('robot_alarm_snapshots')->cascadeOnDelete();
             $table->string('fingerprint', 64);
             $table->string('category', 32);
@@ -52,3 +52,4 @@ return new class extends Migration
         Schema::dropIfExists('robot_controller_state_samples');
     }
 };
+

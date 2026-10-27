@@ -12,7 +12,7 @@ return new class extends Migration
     {
         Schema::create('robot_connection_events', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('robot_id')->constrained('robots')->restrictOnDelete();
+            $table->foreignId('robot_id')->constrained('robots')->noActionOnDelete();
             $table->string('state', 32); // connected, offline, reconnecting, stopped
             $table->text('message')->nullable();
             $table->string('ip_address', 45)->nullable();
@@ -29,3 +29,4 @@ return new class extends Migration
         Schema::dropIfExists('robot_connection_events');
     }
 };
+

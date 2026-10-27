@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\RmsModel as Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MaintenanceRecommendation extends Model
@@ -54,3 +54,4 @@ class MaintenanceRecommendation extends Model
         return $this->belongsTo(MaintenancePlan::class);
     }
 }
+

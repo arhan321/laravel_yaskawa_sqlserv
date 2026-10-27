@@ -12,11 +12,11 @@ return new class extends Migration
     {
         Schema::create('maintenance_recommendations', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('robot_id')->constrained('robots')->restrictOnDelete();
+            $table->foreignId('robot_id')->constrained('robots')->noActionOnDelete();
             $table->foreignId('robot_health_assessment_id')->nullable()
-                ->constrained('robot_health_assessments')->restrictOnDelete();
+                ->constrained('robot_health_assessments')->noActionOnDelete();
             $table->foreignId('maintenance_plan_id')->nullable()
-                ->constrained('maintenance_plans')->restrictOnDelete();
+                ->constrained('maintenance_plans')->noActionOnDelete();
             $table->string('source', 40)->default('rule_engine');
             $table->string('priority', 32)->default('normal');
             $table->string('status', 32)->default('open');
@@ -40,3 +40,4 @@ return new class extends Migration
         Schema::dropIfExists('maintenance_recommendations');
     }
 };
+

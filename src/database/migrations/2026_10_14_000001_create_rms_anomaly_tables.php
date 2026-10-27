@@ -16,7 +16,7 @@ return new class extends Migration {
         });
         Schema::create('robot_anomaly_baselines', static function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('robot_id')->constrained('robots')->restrictOnDelete();
+            $table->foreignId('robot_id')->constrained('robots')->noActionOnDelete();
             $table->string('axis', 2);
             $table->string('job_key', 120)->default('__unspecified__');
             $table->string('metric', 40)->default('torque_abs');
@@ -32,9 +32,9 @@ return new class extends Migration {
         });
         Schema::create('robot_anomaly_events', static function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('robot_id')->constrained('robots')->restrictOnDelete();
-            $table->foreignId('baseline_id')->constrained('robot_anomaly_baselines')->restrictOnDelete();
-            $table->foreignId('trigger_sample_id')->constrained('robot_telemetry_samples')->restrictOnDelete();
+            $table->foreignId('robot_id')->constrained('robots')->noActionOnDelete();
+            $table->foreignId('baseline_id')->constrained('robot_anomaly_baselines')->noActionOnDelete();
+            $table->foreignId('trigger_sample_id')->constrained('robot_telemetry_samples')->noActionOnDelete();
             $table->string('axis', 2);
             $table->string('job_key', 120);
             $table->string('severity', 16);
@@ -70,3 +70,4 @@ return new class extends Migration {
         });
     }
 };
+

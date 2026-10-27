@@ -131,32 +131,44 @@ class RmsCollectorTokenSeeder extends Seeder
                     ->where('id', self::TOKEN_ID)
                     ->update($tokenData);
             } else {
-                DB::table('personal_access_tokens')->insert(
-                    array_merge(
-                        $tokenData,
-                        [
-                            'id' => self::TOKEN_ID,
-                            'last_used_at' => null,
-                            'created_at' => now(),
-                        ]
-                    )
-                );
+                $sqlServer = DB::connection()->getDriverName() === 'sqlsrv';
+                if ($sqlServer) {
+                    DB::statement('SET IDENTITY_INSERT personal_access_tokens ON');
+                }
+                try {
+                    DB::table('personal_access_tokens')->insert(
+                        array_merge(
+                            $tokenData,
+                            [
+                                'id' => self::TOKEN_ID,
+                                'last_used_at' => null,
+                                'created_at' => now(),
+                            ]
+                        )
+                    );
+                } finally {
+                    if ($sqlServer) {
+                        DB::statement('SET IDENTITY_INSERT personal_access_tokens OFF');
+                    }
+                }
             }
 
-            // 6. Sinkronisasi sequence ID PostgreSQL.
-            DB::selectOne("
-                SELECT setval(
-                    pg_get_serial_sequence(
-                        'personal_access_tokens', 'id'
-                    ),
-                    GREATEST(
-                        (SELECT COALESCE(MAX(id), 0)
-                         FROM personal_access_tokens),
-                        1
-                    ),
-                    true
-                )
-            ");
+            if (DB::connection()->getDriverName() === 'pgsql') {
+                // 6. Sinkronisasi sequence ID PostgreSQL.
+                DB::selectOne("
+                    SELECT setval(
+                        pg_get_serial_sequence(
+                            'personal_access_tokens', 'id'
+                        ),
+                        GREATEST(
+                            (SELECT COALESCE(MAX(id), 0)
+                             FROM personal_access_tokens),
+                            1
+                        ),
+                        true
+                    )
+                ");
+            }
         });
 
         $this->command?->info(
@@ -168,3 +180,4 @@ class RmsCollectorTokenSeeder extends Seeder
         );
     }
 }
+

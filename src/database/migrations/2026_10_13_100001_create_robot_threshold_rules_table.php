@@ -11,7 +11,7 @@ return new class extends Migration {
     {
         Schema::create('robot_threshold_rules', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('robot_id')->constrained('robots')->restrictOnDelete();
+            $table->foreignId('robot_id')->constrained('robots')->noActionOnDelete();
             $table->string('axis', 2); // S L U R B T
             $table->string('metric', 48)->default('torque_magnitude');
             $table->string('unit', 32)->default('sdk_raw');
@@ -35,3 +35,4 @@ return new class extends Migration {
     }
     public function down(): void { Schema::dropIfExists('robot_threshold_rules'); }
 };
+

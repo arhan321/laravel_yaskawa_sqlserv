@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\RmsModel as Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class RobotThresholdEvent extends Model
@@ -20,3 +20,4 @@ class RobotThresholdEvent extends Model
     public function robot(): BelongsTo { return $this->belongsTo(Robot::class); }
     public function rule(): BelongsTo { return $this->belongsTo(RobotThresholdRule::class, 'threshold_rule_id'); }
 }
+

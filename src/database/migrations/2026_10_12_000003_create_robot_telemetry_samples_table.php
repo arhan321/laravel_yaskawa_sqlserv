@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -14,7 +15,7 @@ return new class extends Migration
         // Do not interpret SDK RAW torque numbers as Nm or percent without validation.
         Schema::create('robot_telemetry_samples', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('robot_id')->constrained('robots')->restrictOnDelete();
+            $table->foreignId('robot_id')->constrained('robots')->noActionOnDelete();
             $table->uuid('collector_session_id')->nullable(); // Optional, for reliable replay deduplication.
             $table->unsignedBigInteger('sequence')->nullable();
             $table->unsignedBigInteger('collector_uptime_seconds')->nullable();
@@ -38,8 +39,13 @@ return new class extends Migration
             $table->timestampsTz(3);
 
             $table->index(['robot_id', 'sampled_at'], 'telemetry_robot_time_idx');
-            $table->unique(['robot_id', 'collector_session_id', 'sequence'], 'telemetry_session_seq_uq');
+            if (DB::connection()->getDriverName() !== 'sqlsrv') {
+                $table->unique(['robot_id', 'collector_session_id', 'sequence'], 'telemetry_session_seq_uq');
+            }
         });
+        if (DB::connection()->getDriverName() === 'sqlsrv') {
+            DB::statement('CREATE UNIQUE INDEX [telemetry_session_seq_uq] ON [robot_telemetry_samples] ([robot_id], [collector_session_id], [sequence]) WHERE [collector_session_id] IS NOT NULL AND [sequence] IS NOT NULL');
+        }
     }
 
     public function down(): void
@@ -47,3 +53,4 @@ return new class extends Migration
         Schema::dropIfExists('robot_telemetry_samples');
     }
 };
+

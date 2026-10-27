@@ -11,7 +11,7 @@ return new class extends Migration {
     {
         Schema::create('robot_reducer_measurements', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('robot_id')->constrained('robots')->restrictOnDelete();
+            $table->foreignId('robot_id')->constrained('robots')->noActionOnDelete();
             $table->string('axis', 2);
             $table->timestampTz('measured_at', 3);
             $table->decimal('condition_value', 18, 6)->nullable();
@@ -32,3 +32,4 @@ return new class extends Migration {
     }
     public function down(): void { Schema::dropIfExists('robot_reducer_measurements'); }
 };
+

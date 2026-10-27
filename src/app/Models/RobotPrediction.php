@@ -1,6 +1,6 @@
 <?php
 namespace App\Models;
-use Illuminate\Database\Eloquent\Model;
+use App\Models\RmsModel as Model;
 class RobotPrediction extends Model
 {
     protected $guarded=['id'];
@@ -8,3 +8,4 @@ class RobotPrediction extends Model
     public function robot(){return $this->belongsTo(Robot::class);}
     public function model(){return $this->belongsTo(RobotPredictionModel::class,'model_id');}
 }
+

@@ -12,8 +12,8 @@ return new class extends Migration {
     {
         Schema::create('robot_threshold_events', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('robot_id')->constrained('robots')->restrictOnDelete();
-            $table->foreignId('threshold_rule_id')->constrained('robot_threshold_rules')->restrictOnDelete();
+            $table->foreignId('robot_id')->constrained('robots')->noActionOnDelete();
+            $table->foreignId('threshold_rule_id')->constrained('robot_threshold_rules')->noActionOnDelete();
             $table->foreignId('trigger_sample_id')->nullable()->constrained('robot_telemetry_samples')->nullOnDelete();
             $table->string('axis', 2);
             $table->string('severity', 16); // warning / critical
@@ -31,3 +31,4 @@ return new class extends Migration {
     }
     public function down(): void { Schema::dropIfExists('robot_threshold_events'); }
 };
+

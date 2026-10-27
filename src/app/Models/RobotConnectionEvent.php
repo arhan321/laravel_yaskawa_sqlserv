@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\RmsModel as Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class RobotConnectionEvent extends Model
@@ -32,3 +32,4 @@ class RobotConnectionEvent extends Model
         return $this->belongsTo(Robot::class);
     }
 }
+

@@ -14,7 +14,7 @@ return new class extends Migration
             $table->foreignId('maintenance_recommendation_id')
                 ->nullable()
                 ->constrained('maintenance_recommendations')
-                ->restrictOnDelete();
+                ->noActionOnDelete();
             $table->index('maintenance_recommendation_id', 'pm_log_recommendation_idx');
         });
     }
@@ -27,3 +27,4 @@ return new class extends Migration
         });
     }
 };
+

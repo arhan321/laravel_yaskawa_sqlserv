@@ -12,7 +12,7 @@ return new class extends Migration
     {
         Schema::create('maintenance_plans', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('robot_id')->constrained('robots')->restrictOnDelete();
+            $table->foreignId('robot_id')->constrained('robots')->noActionOnDelete();
             $table->string('title', 180);
             $table->text('description')->nullable();
             $table->string('basis', 32)->default('operating_hours'); // operating_hours / calendar
@@ -34,3 +34,4 @@ return new class extends Migration
         Schema::dropIfExists('maintenance_plans');
     }
 };
+
