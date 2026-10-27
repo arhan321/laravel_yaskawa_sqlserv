@@ -19,7 +19,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
 /**
- * Shared view helpers for an RMS running on PostgreSQL 16.
+ * Shared view helpers for an RMS running on SQL Server or PostgreSQL.
  * Only reads already-ingested data. No YMConnect calls and no synthetic telemetry.
  */
 abstract class BaseRmsWebController extends Controller
@@ -33,8 +33,8 @@ abstract class BaseRmsWebController extends Controller
     }
 
     /**
-     * PostgreSQL DISTINCT ON fetches the newest sample PER robot without
-     * loading the full time-series history. $model/$column are internal literals.
+     * Fetches the newest matching sample per robot using portable window SQL.
+     * Ties are resolved by id. $model/$column/$equals keys are internal literals.
      *
      * @param  class-string<Model>  $model
      */
@@ -44,17 +44,41 @@ abstract class BaseRmsWebController extends Controller
             return collect();
         }
 
-        $query = $model::query()
-            ->selectRaw('DISTINCT ON (robot_id) *')
-            ->whereIn('robot_id', $robotIds->all());
+        $instance = new $model;
+        $table = $instance->getTable();
+        $grammar = $instance->getConnection()->getQueryGrammar();
+
+        // Filter BEFORE ranking so each time_type keeps its own latest sample.
+        // Only internal model/column names are used in this SQL expression.
+        $ranked = $model::query()
+            ->select($table.'.id')
+            ->selectRaw(sprintf(
+                'ROW_NUMBER() OVER (PARTITION BY %s ORDER BY %s DESC, %s DESC) AS %s',
+                $grammar->wrap($table.'.robot_id'),
+                $grammar->wrap($table.'.'.$column),
+                $grammar->wrap($table.'.id'),
+                $grammar->wrap('rms_latest_row'),
+            ))
+            ->whereIn($table.'.robot_id', $robotIds->all());
 
         foreach ($equals as $key => $value) {
-            $query->where($key, $value);
+            $ranked->where($table.'.'.$key, $value);
         }
 
-        return $query->orderBy('robot_id')
-            ->orderByDesc($column)
-            ->orderByDesc('id')
+        // Keep ranking inside a subquery: window results cannot be filtered in
+        // the same SELECT. This remains one database statement, not one per robot.
+        $latestIds = $instance->getConnection()->query()
+            ->fromSub($ranked, 'rms_ranked_samples')
+            ->select('id')
+            ->where('rms_latest_row', 1);
+
+        // Fetch full Eloquent models so datetime, boolean and JSON casts survive;
+        // the temporary ranking column never becomes part of the model data.
+        return $model::query()
+            ->whereIn($table.'.id', $latestIds)
+            ->orderBy($table.'.robot_id')
+            ->orderByDesc($table.'.'.$column)
+            ->orderByDesc($table.'.id')
             ->get()
             ->keyBy('robot_id');
     }

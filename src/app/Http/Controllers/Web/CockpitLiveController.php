@@ -15,10 +15,10 @@ use App\Services\Rms\ControllerStateTextReader;
 use App\Services\Rms\JobTextParser;
 use App\Services\Rms\OperatingTimeDisplay;
 use App\Services\Rms\CockpitEvidence;
+use App\Support\RmsDatabase;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Read-only, same-origin Robot Cockpit snapshot for browser updates.
@@ -32,7 +32,6 @@ final class CockpitLiveController extends Controller
         $period = $validated['period'] ?? '8h';
         $seconds = ['1h' => 3600, '8h' => 28800, '24h' => 86400][$period];
         $bucket = (int) ceil($seconds / 300);
-        $bucketExpr = "date_bin(INTERVAL '{$bucket} seconds', sampled_at, TIMESTAMPTZ '2000-01-01 00:00:00+00')";
         $now = now();
         $axes = ['S', 'L', 'U', 'R', 'B', 'T'];
 
@@ -42,14 +41,14 @@ final class CockpitLiveController extends Controller
             && $freshnessAt->betweenIncluded($now->copy()->subSeconds(30), $now->copy()->addSeconds(5))
             && ($latest->position_ok || $latest->torque_ok);
 
-        $rows = DB::table('robot_telemetry_samples')
-            ->selectRaw("DISTINCT ON ($bucketExpr) sampled_at, torque_axes, torque_ok, torque_unit")
-            ->where('robot_id', $robot->id)
-            ->where('sampled_at', '>=', $now->copy()->subSeconds($seconds))
-            ->where('sampled_at', '<=', $now->copy()->addSeconds(5))
-            ->orderByRaw("$bucketExpr DESC")
-            ->orderByDesc('sampled_at')
-            ->limit(300)->get()->reverse()->values();
+        // Match the initial cockpit page's SQL Server/PostgreSQL sample selection.
+        // Retain the same time window, latest-300 limit and failed-read gaps.
+        $rows = RmsDatabase::cockpitSamples(
+            (int) $robot->id,
+            $bucket,
+            $now->copy()->subSeconds($seconds),
+            $now->copy()->addSeconds(5),
+        );
 
         $series = $rows->map(static function ($row) use ($axes): array {
             $raw = is_string($row->torque_axes) ? json_decode($row->torque_axes, true) : $row->torque_axes;

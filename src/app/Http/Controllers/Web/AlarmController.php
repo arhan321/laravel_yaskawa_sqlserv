@@ -61,16 +61,38 @@ class AlarmController extends BaseRmsWebController
             $eventsQuery->where('severity', $severity);
         }
 
-        if (!empty($filter['search'])) {
-            $needle = '%' . addcslashes(trim($filter['search']), '%_\\') . '%';
-            $eventsQuery->where(static function ($query) use ($needle): void {
-                $query->where('alarm_code', 'ILIKE', $needle)
-                    ->orWhere('alarm_name', 'ILIKE', $needle);
-            });
-            $historyQuery->where(static function ($query) use ($needle): void {
-                $query->where('alarm_code', 'ILIKE', $needle)
-                    ->orWhere('alarm_name', 'ILIKE', $needle);
-            });
+        $search = trim((string) ($filter['search'] ?? ''));
+        if ($search !== '') {
+            // Treat the search as a literal substring, including LIKE wildcards.
+            // An explicit escape character works for SQL Server and PostgreSQL.
+            $needle = '%'.str_replace(
+                ['!', '%', '_', '['],
+                ['!!', '!%', '!_', '!['],
+                $search,
+            ).'%';
+
+            foreach ([$eventsQuery, $historyQuery] as $searchQuery) {
+                $grammar = $searchQuery->getQuery()->getGrammar();
+                $driver = $searchQuery->getConnection()->getDriverName();
+                $codeColumn = $grammar->wrap('alarm_code');
+                $nameColumn = $grammar->wrap('alarm_name');
+                $operator = $driver === 'pgsql' ? 'ILIKE' : 'LIKE';
+                // Keep case-insensitive search even on a case-sensitive SQL Server DB.
+                // This is a fixed server-side collation, never request input.
+                $collation = $driver === 'sqlsrv' ? ' COLLATE Latin1_General_100_CI_AS_SC' : '';
+
+                $searchQuery->where(static function ($query) use (
+                    $needle, $codeColumn, $nameColumn, $operator, $collation
+                ): void {
+                    $query->whereRaw(
+                        "$codeColumn$collation $operator ? ESCAPE '!'",
+                        [$needle],
+                    )->orWhereRaw(
+                        "$nameColumn$collation $operator ? ESCAPE '!'",
+                        [$needle],
+                    );
+                });
+            }
         }
         if (($filter['category'] ?? 'all') !== 'all') {
             $historyQuery->where('category', $filter['category']);

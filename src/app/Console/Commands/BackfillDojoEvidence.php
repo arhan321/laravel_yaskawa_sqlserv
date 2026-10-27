@@ -75,9 +75,18 @@ final class BackfillDojoEvidence extends Command
         $controller=$robot->controller;
         if($controller){
             $ids=Robot::query()->where('controller_id',$controller->id)->pluck('id');
+            // Use the same real-event JSON filter as the collector connection API.
+            // Missing/null flags remain real; JSON true and the string "true"
+            // remain excluded when reconciling physical controller status.
+            $simulatedValue = match (DB::connection()->getDriverName()) {
+                'sqlsrv' => "JSON_VALUE(raw_payload, '$.simulated')",
+                'pgsql' => "raw_payload->>'simulated'",
+                default => throw new \LogicException(
+                    'RMS connection evidence requires SQL Server or PostgreSQL.'
+                ),
+            };
             $real=RobotConnectionEvent::query()->whereIn('robot_id',$ids)
-                ->where(function($q){$q->whereNull('raw_payload')
-                    ->orWhereRaw("COALESCE(raw_payload->>'simulated','false') <> 'true'");});
+                ->whereRaw("COALESCE($simulatedValue, 'false') <> 'true'");
             $last=(clone $real)->orderByDesc('occurred_at')->orderByDesc('id')->first();
             $lastOn=(clone $real)->where('state','connected')->orderByDesc('occurred_at')->first();
             $this->line('Controller status from latest real event: '.($last?->state??'unknown'));

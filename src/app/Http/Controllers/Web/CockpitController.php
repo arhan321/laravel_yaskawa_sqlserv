@@ -12,10 +12,10 @@ use App\Models\RobotThresholdRule;
 use App\Services\Rms\OperatingTimeDisplay;
 use App\Services\Rms\CockpitEvidence;
 use App\Services\Rms\ControllerStateTextReader;
+use App\Support\RmsDatabase;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 /** Blade-only, read-only cockpit page. Does not impersonate OEM health algorithms. */
 class CockpitController extends Controller
@@ -27,7 +27,6 @@ class CockpitController extends Controller
         $period = $validated['period'] ?? '8h';
         $seconds = ['1h' => 3600, '8h' => 28800, '24h' => 86400][$period];
         $bucket = (int) ceil($seconds / 300); // <= 300 representative samples / selected period.
-        $bucketExpr = "date_bin(INTERVAL '{$bucket} seconds', sampled_at, TIMESTAMPTZ '2000-01-01 00:00:00+00')";
 
         $robot->load('controller');
         $latest = $robot->telemetrySamples()->orderByDesc('received_at')->orderByDesc('id')->first();
@@ -36,16 +35,15 @@ class CockpitController extends Controller
             $freshnessAt->betweenIncluded(now()->subSeconds(30), now()->addSeconds(5)) &&
             ($latest->torque_ok || $latest->position_ok);
 
-        // PostgreSQL date_bin + DISTINCT ON bounds rendering and preserves actual time range.
-        // Returns newest row per bucket; an invalid read becomes a visible data gap.
-        $samples = DB::table('robot_telemetry_samples')
-            ->selectRaw("DISTINCT ON ($bucketExpr) sampled_at, torque_axes, torque_ok, torque_unit")
-            ->where('robot_id', $robot->id)
-            ->where('sampled_at', '>=', now()->subSeconds($seconds))
-            ->where('sampled_at', '<=', now()->addSeconds(5))
-            ->orderByRaw("$bucketExpr DESC")
-            ->orderByDesc('sampled_at')
-            ->limit(300)->get()->reverse()->values();
+        // Use the shared SQL Server/PostgreSQL query: one actual read per bucket.
+        // The helper limits the result to 300 points, keeps timestamp/id tie-breaking,
+        // and leaves failed torque reads visible as gaps instead of filling them in.
+        $samples = RmsDatabase::cockpitSamples(
+            (int) $robot->id,
+            $bucket,
+            now()->subSeconds($seconds),
+            now()->addSeconds(5),
+        );
         $series = $samples->map(static function ($sample): array {
             $data = is_string($sample->torque_axes) ? json_decode($sample->torque_axes, true) : $sample->torque_axes;
             $axes = [];

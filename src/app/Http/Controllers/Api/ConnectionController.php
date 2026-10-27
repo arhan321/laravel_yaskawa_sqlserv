@@ -49,9 +49,18 @@ class ConnectionController extends BaseRmsController
             $event=RobotConnectionEvent::create($data);
             if($controller){
                 $robotIds=Robot::query()->where('controller_id',$controller->id)->pluck('id');
+                // JSON extraction differs between SQL Server and PostgreSQL.
+                // Keep missing/null flags equivalent to false and exclude both
+                // the JSON boolean true and the string "true" from real events.
+                $simulatedValue = match (DB::connection()->getDriverName()) {
+                    'sqlsrv' => "JSON_VALUE(raw_payload, '$.simulated')",
+                    'pgsql' => "raw_payload->>'simulated'",
+                    default => throw new \LogicException(
+                        'RMS connection events require SQL Server or PostgreSQL.'
+                    ),
+                };
                 $realEvents=RobotConnectionEvent::query()->whereIn('robot_id',$robotIds)
-                    ->where(function($q){$q->whereNull('raw_payload')
-                        ->orWhereRaw("COALESCE(raw_payload->>'simulated','false') <> 'true'");});
+                    ->whereRaw("COALESCE($simulatedValue, 'false') <> 'true'");
                 $newest=(clone $realEvents)->orderByDesc('occurred_at')->orderByDesc('id')->first();
                 $lastSuccessful=(clone $realEvents)->where('state','connected')
                     ->orderByDesc('occurred_at')->first();
